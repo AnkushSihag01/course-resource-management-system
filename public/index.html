@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Resource Management System</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#172554}
+header{background:#172554;color:white;padding:25px;text-align:center}
+main{max-width:950px;margin:30px auto;padding:15px}
+.panel{background:white;padding:25px;border-radius:12px;margin-bottom:22px;box-shadow:0 3px 12px #0001}
+h2{margin-top:0}
+input,select{width:100%;padding:12px;margin:8px 0 15px;border:1px solid #cbd5e1;border-radius:6px}
+button{background:#2563eb;color:white;border:0;padding:11px 17px;border-radius:6px;cursor:pointer}
+button:hover{background:#1d4ed8}
+.delete{background:#dc2626}
+.resource{border:1px solid #e2e8f0;padding:15px;border-radius:8px;margin:12px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.resource p{margin:5px 0;color:#64748b}
+a{color:#2563eb}
+@media(max-width:550px){.resource{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+<h1>Course Resource Management System</h1>
+<p>Manage your educational resources in one place</p>
+</header>
+<main>
+<section class="panel">
+<h2>Add New Resource</h2>
+<form id="resourceForm">
+<label>Resource Title</label>
+<input id="title" placeholder="e.g. Cloud Computing Notes" required>
+<label>Subject</label>
+<input id="subject" placeholder="e.g. Cloud Computing" required>
+<label>Resource Type</label>
+<select id="type">
+<option>Notes</option><option>PDF</option>
+<option>Assignment</option><option>Video</option>
+<option>Other</option>
+</select>
+<label>Resource Link (optional)</label>
+<input id="link" type="url" placeholder="https://example.com">
+<button type="submit">Add Resource</button>
+</form>
+</section>
+<section class="panel">
+<h2>Available Course Resources</h2>
+<div id="resources">Loading resources...</div>
+</section>
+</main>
+<script>
+const list = document.getElementById('resources');
+
+async function loadResources(){
+  try {
+    const response = await fetch('/api/resources');
+    if(!response.ok) throw new Error('Unable to load resources');
+    const data = await response.json();
+    list.innerHTML = '';
+    if(data.length === 0){
+      list.textContent = 'No resources added yet.';
+      return;
+    }
+    data.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'resource';
+      const info = document.createElement('div');
+      const heading = document.createElement('strong');
+      heading.textContent = r.title;
+      const details = document.createElement('p');
+      details.textContent = r.subject + ' | ' + r.type;
+      info.append(heading, details);
+      if(r.link){
+        const link = document.createElement('a');
+        link.href = r.link;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Open Resource';
+        info.append(link);
+      }
+      const del = document.createElement('button');
+      del.className = 'delete';
+      del.textContent = 'Delete';
+      del.onclick = async () => {
+        const result = await fetch('/api/resources/' + r._id, {method:'DELETE'});
+        if(result.ok) loadResources();
+        else alert('Could not delete resource');
+      };
+      item.append(info, del);
+      list.append(item);
+    });
+  } catch(err) {
+    list.textContent = err.message;
+  }
+}
+
+document.getElementById('resourceForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const resource = {
+    title: document.getElementById('title').value,
+    subject: document.getElementById('subject').value,
+    type: document.getElementById('type').value,
+    link: document.getElementById('link').value
+  };
+  const response = await fetch('/api/resources', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(resource)
+  });
+  if(response.ok){
+    e.target.reset();
+    loadResources();
+  } else {
+    alert('Failed to add resource');
+  }
+});
+
+loadResources();
+</script>
+</body>
+</html>
